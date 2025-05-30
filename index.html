@@ -18,17 +18,17 @@
     :root {
       --primary-color: #16a34a;
       --secondary-color: #065f46;
-      --text-color: #1f2937;
-      --bg-color: #f9fafb;
-      --card-bg: #ffffff;
+      --text-color: #111;
+      --bg-color: #555;
+      --card-bg: #111;
     }
     
     .dark {
       --primary-color: #10b981;
-      --secondary-color: #047857;
-      --text-color: #f3f4f6;
-      --bg-color: #111827;
-      --card-bg: #1f2937;
+      --secondary-color: #fff;
+      --text-color: #111;
+      --bg-color: #111;
+      --card-bg: #333;
     }
     
     body {
@@ -155,7 +155,7 @@
           </div>
           
           <div v-if="searchQuery && searchResults.length === 0" class="mt-4 text-center text-gray-500">
-            لا توجد نتائج مطابقة لبحثك
+‎            لا توجد نتائج مطابقة لبحثك
           </div>
         </div>
         
@@ -178,7 +178,7 @@
         <div v-if="!searchQuery" class="space-y-4">
           <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
             <i class="fas fa-book-quran rtl-mr-2"></i>
-            سور القرآن الكريم
+‎            سور القرآن الكريم
           </h2>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -268,7 +268,7 @@
       <div v-if="page === 'favorites'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-bookmark rtl-mr-2"></i>
-          السور والآيات المفضلة
+‎          السور والآيات المفضلة
         </h2>
         
         <div v-if="bookmarkedSurahs.length === 0 && bookmarkedAyahs.length === 0" class="text-center py-10 text-gray-500">
@@ -326,7 +326,7 @@
       <div v-if="page === 'azkar'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-praying-hands rtl-mr-2"></i>
-          الأذكار من حصن المسلم
+‎          الأذكار من حصن المسلم
         </h2>
         
         <div class="flex justify-center mb-6">
@@ -334,12 +334,12 @@
             <button @click="setAzkarCategory('morning')" 
                     :class="{'btn-primary': azkarCategory === 'morning', 'bg-gray-200 dark:bg-gray-700': azkarCategory !== 'morning'}" 
                     class="px-4 py-2 rounded-r-lg border border-gray-300 dark:border-gray-600">
-              أذكار الصباح
+‎              أذكار الصباح
             </button>
             <button @click="setAzkarCategory('evening')" 
                     :class="{'btn-primary': azkarCategory === 'evening', 'bg-gray-200 dark:bg-gray-700': azkarCategory !== 'evening'}" 
                     class="px-4 py-2 rounded-l-lg border border-gray-300 dark:border-gray-600">
-              أذكار المساء
+‎              أذكار المساء
             </button>
           </div>
         </div>
@@ -379,7 +379,7 @@
       <div v-if="page === 'tasbeeh'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-hands-praying rtl-mr-2"></i>
-          عداد التسبيح
+‎          عداد التسبيح
         </h2>
         
         <div class="card rounded-lg p-6 shadow-lg text-center">
@@ -407,7 +407,7 @@
         <div class="card rounded-lg p-4 shadow-lg mt-6">
           <h3 class="font-bold mb-3 text-green-500">التسابيح المحفوظة</h3>
           <div v-if="savedCounters.length === 0" class="text-center py-4 text-gray-500">
-            لا توجد تسابيح محفوظة
+‎            لا توجد تسابيح محفوظة
           </div>
           <div v-else class="space-y-3">
             <div v-for="(saved, index) in savedCounters" :key="index" 
@@ -430,7 +430,7 @@
           <div class="mt-4 flex items-center">
             <input v-model="counterName" placeholder="اسم التسبيح" class="flex-1 p-2 border rounded-lg rtl-mr-2">
             <button @click="saveCounter" class="btn-primary px-4 py-2 rounded-lg">
-              حفظ
+‎              حفظ
             </button>
           </div>
         </div>
@@ -440,7 +440,7 @@
       <div v-if="page === 'prayer'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-mosque rtl-mr-2"></i>
-          مواقيت الصلاة
+‎          مواقيت الصلاة
         </h2>
         
         <div class="card rounded-lg p-4 shadow-lg">
@@ -465,10 +465,10 @@
               <h4 class="font-bold mb-1">{{ prayer.label }}</h4>
               <div class="text-xl">{{ prayer.time }}</div>
               <div v-if="isCurrentPrayer(prayer.name)" class="text-xs mt-1 text-green-500">
-                الآن
+‎                الآن
               </div>
               <div v-else-if="nextPrayer && prayer.name === nextPrayer.name" class="text-xs mt-1 text-yellow-500">
-                القادمة
+‎                القادمة
               </div>
             </div>
           </div>
@@ -497,7 +497,7 @@
       <div v-if="page === 'qibla'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-compass rtl-mr-2"></i>
-          اتجاه القبلة
+‎          اتجاه القبلة
         </h2>
         
         <div class="card rounded-lg p-4 shadow-lg text-center">
@@ -534,7 +534,7 @@
           
           <button @click="getLocation" class="btn-primary px-4 py-2 rounded-lg flex items-center mx-auto">
             <i class="fas fa-location-arrow rtl-mr-2"></i>
-            تحديث الموقع
+‎            تحديث الموقع
           </button>
           
           <div v-if="locationError" class="mt-4 text-red-500">{{ locationError }}</div>
@@ -545,7 +545,7 @@
       <div v-if="page === 'settings'" class="space-y-6">
         <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
           <i class="fas fa-cog rtl-mr-2"></i>
-          الإعدادات
+‎          الإعدادات
         </h2>
         
         <div class="card rounded-lg p-4 shadow-lg space-y-6">
@@ -553,7 +553,7 @@
           <div>
             <h3 class="font-bold mb-3 flex items-center">
               <i class="fas fa-language rtl-mr-2"></i>
-              اللغة
+‎              اللغة
             </h3>
             <select v-model="language" @change="changeLanguage" 
                     class="w-full p-3 border rounded-lg bg-white dark:bg-gray-800">
@@ -572,7 +572,7 @@
           <div>
             <h3 class="font-bold mb-3 flex items-center">
               <i class="fas fa-font rtl-mr-2"></i>
-              حجم الخط
+‎              حجم الخط
             </h3>
             <div class="flex items-center">
               <span class="rtl-mr-2">A</span>
@@ -586,7 +586,7 @@
           <div class="max-w-md mx-auto p-4 space-y-4 bg-gray-900 text-white rounded-xl shadow-lg">
   <h2 class="text-xl font-bold mb-4 text-center">حسابات مطور التطبيق</h2>
 
-  <!-- تويتر -->
+‎  <!-- تويتر -->
   <a href="https://twitter.com/eb2uu" target="_blank" class="flex items-center justify-between bg-[#1DA1F2] hover:bg-[#1a91da] px-4 py-3 rounded-lg transition duration-200">
     <div class="flex items-center space-x-3 rtl:space-x-reverse">
       <i class="fab fa-twitter text-white text-xl"></i>
@@ -596,22 +596,13 @@
     <i class="fas fa-arrow-left text-white text-lg rtl:rotate-180"></i>
   </a>
 
-  <!-- تليجرام -->
-  <a href="https://t.me/em2cc" target="_blank" class="flex items-center justify-between bg-[#229ED9] hover:bg-[#1e8ebf] px-4 py-3 rounded-lg transition duration-200">
-    <div class="flex items-center space-x-3 rtl:space-x-reverse">
-      <i class="fab fa-telegram text-white text-xl"></i>
-      <span class="font-medium text-white">تليجرام</span>
-      <span class="text-white">@em2cc</span>
-    </div>
-    <i class="fas fa-arrow-left text-white text-lg rtl:rotate-180"></i>
-  </a>
 </div>
           
           <!-- Theme Settings -->
           <div>
             <h3 class="font-bold mb-3 flex items-center">
               <i class="fas fa-palette rtl-mr-2"></i>
-              المظهر
+‎              المظهر
             </h3>
             <div class="grid grid-cols-2 gap-4">
               <button @click="setTheme('light')" 
@@ -633,7 +624,7 @@
           <div>
             <h3 class="font-bold mb-3 flex items-center">
               <i class="fas fa-bell rtl-mr-2"></i>
-              الإشعارات
+‎              الإشعارات
             </h3>
             <div class="space-y-3">
               <div class="flex justify-between items-center">
@@ -664,10 +655,10 @@
           <div>
             <h3 class="font-bold mb-3 flex items-center">
               <i class="fas fa-trash-alt rtl-mr-2"></i>
-              إعادة الضبط
+‎              إعادة الضبط
             </h3>
             <button @click="resetSettings" class="w-full btn-primary py-3 rounded-lg">
-              إعادة تعيين جميع الإعدادات
+‎              إعادة تعيين جميع الإعدادات
             </button>
           </div>
         </div>
