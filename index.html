@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تطبيق القرآن الكريم المتكامل</title>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Tajawal Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- AOS Animation -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #16a34a;
+      --secondary-color: #065f46;
+      --text-color: #1f2937;
+      --bg-color: #f9fafb;
+      --card-bg: #ffffff;
+    }
+    
+    .dark {
+      --primary-color: #10b981;
+      --secondary-color: #047857;
+      --text-color: #f3f4f6;
+      --bg-color: #111827;
+      --card-bg: #1f2937;
+    }
+    
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+    
+    .card {
+      background-color: var(--card-bg);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .active-tab {
+      color: var(--primary-color);
+      font-weight: bold;
+      position: relative;
+    }
+    
+    .active-tab::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20px;
+      height: 3px;
+      background-color: var(--primary-color);
+      border-radius: 3px;
+    }
+    
+    .icon-3d {
+      transition: all 0.3s ease;
+      transform-style: preserve-3d;
+    }
+    
+    .icon-3d:hover {
+      transform: rotateY(20deg) scale(1.1);
+    }
+    
+    .quran-text {
+      line-height: 2.5;
+      text-align: justify;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    
+    /* RTL fixes */
+    [dir="rtl"] .rtl-mr-2 {
+      margin-right: 0.5rem;
+    }
+    
+    [dir="rtl"] .rtl-ml-2 {
+      margin-left: 0.5rem;
+    }
+    
+    /* Prayer times animation */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .prayer-time-active {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div id="app" class="min-h-screen flex flex-col justify-between pb-16">
+    <!-- Header -->
+    <header class="bg-green-600 dark:bg-green-800 shadow-md p-4 text-center text-xl font-bold text-white sticky top-0 z-10">
+      <div class="container mx-auto flex justify-between items-center">
+        <h1>{{ pageTitle }}</h1>
+        <div class="flex items-center space-x-4 rtl:space-x-reverse">
+          <button @click="toggleTheme" class="p-2 rounded-full bg-white/20 hover:bg-white/30 transition">
+            <i :class="isDark ? 'fas fa-sun' : 'fas fa-moon'"></i>
+          </button>
+          <button v-if="page !== 'settings'" @click="setPage('settings')" class="p-2 rounded-full bg-white/20 hover:bg-white/30 transition">
+            <i class="fas fa-cog"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 overflow-y-auto container mx-auto">
+      <!-- Home Page -->
+      <div v-if="page === 'home'" class="space-y-6">
+        <!-- Search Section -->
+        <div class="card rounded-lg p-4 shadow-lg">
+          <div class="relative">
+            <input type="text" v-model="searchQuery" @input="searchQuran" 
+                   placeholder="ابحث عن آية أو سورة..." 
+                   class="w-full p-3 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+          </div>
+          
+          <div v-if="searchQuery && searchResults.length === 0" class="mt-4 text-center text-gray-500">
+            لا توجد نتائج مطابقة لبحثك
+          </div>
+        </div>
+        
+        <!-- Search Results -->
+        <div v-if="searchQuery && searchResults.length > 0" class="card rounded-lg p-4 shadow-lg">
+          <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400">نتائج البحث</h2>
+          <div v-for="result in searchResults" :key="result.ayah_key" 
+               class="p-3 mb-2 border-b border-gray-200 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-pointer"
+               @click="openSurah(result.surah_number, result.ayah_number)">
+            <div class="flex justify-between items-start">
+              <div class="quran-text" :style="{ fontSize: fontSize + 'px' }">{{ result.text }}</div>
+              <span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded whitespace-nowrap">
+                {{ getSurahName(result.surah_number) }}:{{ result.ayah_number }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Surah List -->
+        <div v-if="!searchQuery" class="space-y-4">
+          <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+            <i class="fas fa-book-quran rtl-mr-2"></i>
+            سور القرآن الكريم
+          </h2>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div v-for="surah in surahList" :key="surah.number" 
+                 @click="openSurah(surah.number)" 
+                 class="card rounded-lg p-4 shadow-lg hover:shadow-xl transition cursor-pointer group">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-full mr-3">
+                    {{ surah.number }}
+                  </div>
+                  <h3 class="font-bold">{{ surah.name }}</h3>
+                </div>
+                <span class="text-gray-500 group-hover:text-green-500">{{ surah.english_name }}</span>
+              </div>
+              <div class="mt-2 flex justify-between text-sm text-gray-500">
+                <span>آيات: {{ surah.ayahs }}</span>
+                <span>{{ surah.revelation_type === 'Meccan' ? 'مكية' : 'مدنية' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surah Page -->
+      <div v-if="page === 'surah'" class="space-y-6">
+        <div class="card rounded-lg p-4 shadow-lg">
+          <div class="flex justify-between items-center mb-4">
+            <button @click="setPage('home')" class="btn-primary px-4 py-2 rounded-lg flex items-center">
+              <i class="fas fa-arrow-right rtl-ml-2"></i> العودة
+            </button>
+            <h2 class="text-xl font-bold text-center text-green-600 dark:text-green-400">
+              {{ currentSurahInfo.name }} ({{ currentSurahInfo.english_name }})
+            </h2>
+            <div class="flex items-center">
+              <button @click="toggleBookmark" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i :class="isBookmarked ? 'fas fa-bookmark text-yellow-500' : 'far fa-bookmark'"></i>
+              </button>
+              <button @click="toggleAudio" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 rtl-mr-2">
+                <i :class="isAudioPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="text-center mb-6">
+            <p class="text-gray-600 dark:text-gray-400">عدد الآيات: {{ currentSurahInfo.ayahs }} | {{ currentSurahInfo.revelation_type === 'Meccan' ? 'مكية' : 'مدنية' }}</p>
+          </div>
+          
+          <audio ref="audioPlayer" :src="currentAudioUrl" @ended="audioFinished"></audio>
+          
+          <div class="space-y-6">
+            <div v-for="ayah in currentSurahAyahs" :key="ayah.number" 
+                 class="p-4 border-b border-gray-200 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex items-center">
+                  <div class="w-8 h-8 flex items-center justify-center bg-green-500 text-white rounded-full rtl-mr-2">
+                    {{ ayah.numberInSurah }}
+                  </div>
+                  <button @click="playAyah(ayah.numberInSurah)" 
+                          class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i :class="currentAyah === ayah.numberInSurah && isAudioPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+                  </button>
+                </div>
+                <div class="flex space-x-2 rtl:space-x-reverse">
+                  <button @click="copyAyah(ayah.text)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-copy"></i>
+                  </button>
+                  <button @click="shareAyah(ayah)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <i class="fas fa-share-alt"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="quran-text text-right mb-4" :style="{ fontSize: fontSize + 'px' }">
+                {{ ayah.text }}
+              </div>
+              
+              <div class="text-left text-gray-600 dark:text-gray-400 italic" :style="{ fontSize: (fontSize - 2) + 'px' }">
+                {{ getTranslation(ayah.numberInSurah) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Favorites Page -->
+      <div v-if="page === 'favorites'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-bookmark rtl-mr-2"></i>
+          السور والآيات المفضلة
+        </h2>
+        
+        <div v-if="bookmarkedSurahs.length === 0 && bookmarkedAyahs.length === 0" class="text-center py-10 text-gray-500">
+          <i class="fas fa-bookmark text-4xl mb-4 text-gray-300"></i>
+          <p>لا توجد عناصر مفضلة حتى الآن</p>
+        </div>
+        
+        <div v-if="bookmarkedSurahs.length > 0" class="card rounded-lg p-4 shadow-lg mb-6">
+          <h3 class="font-bold mb-3 text-green-500">السور المفضلة</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div v-for="surah in bookmarkedSurahs" :key="surah.number" 
+                 @click="openSurah(surah.number)" 
+                 class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer flex justify-between items-center">
+              <span>{{ surah.name }}</span>
+              <button @click.stop="removeBookmark(surah.number, 'surah')" class="text-red-500 hover:text-red-700">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="bookmarkedAyahs.length > 0" class="card rounded-lg p-4 shadow-lg">
+          <h3 class="font-bold mb-3 text-green-500">الآيات المفضلة</h3>
+          <div class="space-y-3">
+            <div v-for="ayah in bookmarkedAyahs" :key="ayah.key" 
+                 class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+              <div class="flex justify-between items-start mb-2">
+                <span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded">
+                  {{ getSurahName(ayah.surah) }}:{{ ayah.ayah }}
+                </span>
+                <button @click="removeBookmark(ayah.key, 'ayah')" class="text-red-500 hover:text-red-700">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="quran-text text-right mb-2" :style="{ fontSize: fontSize + 'px' }">
+                {{ ayah.text }}
+              </div>
+              <div class="flex justify-end space-x-2 rtl:space-x-reverse">
+                <button @click="playAyah(ayah.ayah, ayah.surah)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-play"></i>
+                </button>
+                <button @click="copyAyah(ayah.text)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-copy"></i>
+                </button>
+                <button @click="shareAyah(ayah)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-share-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Azkar Page -->
+      <div v-if="page === 'azkar'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-praying-hands rtl-mr-2"></i>
+          الأذكار من حصن المسلم
+        </h2>
+        
+        <div class="flex justify-center mb-6">
+          <div class="inline-flex rounded-md shadow-sm">
+            <button @click="setAzkarCategory('morning')" 
+                    :class="{'btn-primary': azkarCategory === 'morning', 'bg-gray-200 dark:bg-gray-700': azkarCategory !== 'morning'}" 
+                    class="px-4 py-2 rounded-r-lg border border-gray-300 dark:border-gray-600">
+              أذكار الصباح
+            </button>
+            <button @click="setAzkarCategory('evening')" 
+                    :class="{'btn-primary': azkarCategory === 'evening', 'bg-gray-200 dark:bg-gray-700': azkarCategory !== 'evening'}" 
+                    class="px-4 py-2 rounded-l-lg border border-gray-300 dark:border-gray-600">
+              أذكار المساء
+            </button>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div v-for="(zekr, index) in currentAzkar" :key="index" class="card rounded-lg p-4 shadow-lg">
+            <div class="quran-text text-right mb-4" :style="{ fontSize: fontSize + 'px' }">
+              {{ zekr.zekr }}
+            </div>
+            
+            <div v-if="zekr.description" class="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+              {{ zekr.description }}
+            </div>
+            
+            <div class="flex justify-between items-center">
+              <div v-if="zekr.repeat > 1" class="flex items-center">
+                <button @click="decrementRepeat(index)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-minus"></i>
+                </button>
+                <span class="mx-2 w-8 text-center">{{ zekr.currentRepeat || zekr.repeat }}</span>
+                <button @click="incrementRepeat(index)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-plus"></i>
+                </button>
+                <span class="rtl-mr-2">/ {{ zekr.repeat }}</span>
+              </div>
+              <span v-else></span>
+              
+              <button @click="copyAyah(zekr.zekr)" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tasbeeh Page -->
+      <div v-if="page === 'tasbeeh'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-hands-praying rtl-mr-2"></i>
+          عداد التسبيح
+        </h2>
+        
+        <div class="card rounded-lg p-6 shadow-lg text-center">
+          <div class="text-6xl font-bold mb-6 text-green-600 dark:text-green-400">{{ counter }}</div>
+          
+          <div class="flex justify-center space-x-4 rtl:space-x-reverse mb-6">
+            <button @click="incrementCounter" class="bg-green-500 hover:bg-green-600 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl">
+              <i class="fas fa-plus"></i>
+            </button>
+            <button @click="resetCounter" class="bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center text-2xl">
+              <i class="fas fa-redo"></i>
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button v-for="(dhikr, index) in dhikrList" :key="index" 
+                    @click="setCurrentDhikr(index)"
+                    :class="{'bg-green-500 text-white': currentDhikr === index, 'bg-gray-200 dark:bg-gray-700': currentDhikr !== index}"
+                    class="p-2 rounded-lg">
+              {{ dhikr.text }}
+            </button>
+          </div>
+        </div>
+        
+        <div class="card rounded-lg p-4 shadow-lg mt-6">
+          <h3 class="font-bold mb-3 text-green-500">التسابيح المحفوظة</h3>
+          <div v-if="savedCounters.length === 0" class="text-center py-4 text-gray-500">
+            لا توجد تسابيح محفوظة
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="(saved, index) in savedCounters" :key="index" 
+                 class="p-3 border border-gray-200 dark:border-gray-700 rounded-lg flex justify-between items-center">
+              <div>
+                <span class="font-bold">{{ saved.name }}</span>
+                <span class="text-gray-500 rtl-mr-2">({{ saved.count }})</span>
+              </div>
+              <div class="flex space-x-2 rtl:space-x-reverse">
+                <button @click="loadCounter(saved)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                  <i class="fas fa-upload"></i>
+                </button>
+                <button @click="deleteCounter(index)" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-red-500">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 flex items-center">
+            <input v-model="counterName" placeholder="اسم التسبيح" class="flex-1 p-2 border rounded-lg rtl-mr-2">
+            <button @click="saveCounter" class="btn-primary px-4 py-2 rounded-lg">
+              حفظ
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prayer Times Page -->
+      <div v-if="page === 'prayer'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-mosque rtl-mr-2"></i>
+          مواقيت الصلاة
+        </h2>
+        
+        <div class="card rounded-lg p-4 shadow-lg">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="font-bold">{{ prayerTimesData.date }}</h3>
+              <p class="text-gray-600 dark:text-gray-400">{{ prayerTimesData.hijri }}</p>
+            </div>
+            <div class="flex items-center">
+              <select v-model="selectedCity" @change="fetchPrayerTimes" 
+                      class="p-2 border rounded-lg bg-white dark:bg-gray-800">
+                <option v-for="city in cities" :value="city.value">{{ city.name }}</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div v-for="prayer in prayerTimes" :key="prayer.name" 
+                 :class="{'prayer-time-active': isCurrentPrayer(prayer.name)}"
+                 class="p-3 rounded-lg border text-center"
+                 :style="{ borderColor: isCurrentPrayer(prayer.name) ? 'var(--primary-color)' : '' }">
+              <h4 class="font-bold mb-1">{{ prayer.label }}</h4>
+              <div class="text-xl">{{ prayer.time }}</div>
+              <div v-if="isCurrentPrayer(prayer.name)" class="text-xs mt-1 text-green-500">
+                الآن
+              </div>
+              <div v-else-if="nextPrayer && prayer.name === nextPrayer.name" class="text-xs mt-1 text-yellow-500">
+                القادمة
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6">
+            <h4 class="font-bold mb-2">الأوقات المتبقية:</h4>
+            <div class="space-y-2">
+              <div v-if="nextPrayer" class="flex justify-between items-center">
+                <span>وقت {{ nextPrayer.label }}:</span>
+                <span class="font-bold">{{ timeToNextPrayer }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>منتصف الليل:</span>
+                <span class="font-bold">{{ prayerTimesData.midnight }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>وقت الإمساك:</span>
+                <span class="font-bold">{{ prayerTimesData.imsak }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Qibla Page -->
+      <div v-if="page === 'qibla'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-compass rtl-mr-2"></i>
+          اتجاه القبلة
+        </h2>
+        
+        <div class="card rounded-lg p-4 shadow-lg text-center">
+          <div class="relative w-64 h-64 mx-auto mb-6">
+            <div class="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+              <i class="fas fa-mosque text-4xl text-green-500"></i>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-48 h-48 border-4 border-green-500 rounded-full animate-spin" 
+                   style="animation-duration: 10s;"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-40 h-40 border-4 border-green-400 rounded-full animate-spin" 
+                   style="animation-duration: 15s; animation-direction: reverse;"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-32 h-32 border-4 border-green-300 rounded-full animate-spin" 
+                   style="animation-duration: 20s;"></div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-white">
+                <i class="fas fa-kaaba text-2xl"></i>
+              </div>
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-16 h-16 bg-white dark:bg-gray-800 rounded-full shadow-md flex items-center justify-center">
+                <div class="w-4 h-4 bg-red-500 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="text-xl font-bold mb-2">اتجاه القبلة: {{ qiblaDirection }}°</div>
+          <p class="text-gray-600 dark:text-gray-400 mb-4">من موقعك الحالي نحو الكعبة المشرفة</p>
+          
+          <button @click="getLocation" class="btn-primary px-4 py-2 rounded-lg flex items-center mx-auto">
+            <i class="fas fa-location-arrow rtl-mr-2"></i>
+            تحديث الموقع
+          </button>
+          
+          <div v-if="locationError" class="mt-4 text-red-500">{{ locationError }}</div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div v-if="page === 'settings'" class="space-y-6">
+        <h2 class="text-xl font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+          <i class="fas fa-cog rtl-mr-2"></i>
+          الإعدادات
+        </h2>
+        
+        <div class="card rounded-lg p-4 shadow-lg space-y-6">
+          <!-- Language Settings -->
+          <div>
+            <h3 class="font-bold mb-3 flex items-center">
+              <i class="fas fa-language rtl-mr-2"></i>
+              اللغة
+            </h3>
+            <select v-model="language" @change="changeLanguage" 
+                    class="w-full p-3 border rounded-lg bg-white dark:bg-gray-800">
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ur">اردو</option>
+              <option value="id">Bahasa Indonesia</option>
+              <option value="tr">Türkçe</option>
+              <option value="ms">Bahasa Melayu</option>
+            </select>
+          </div>
+          
+          <!-- Font Settings -->
+          <div>
+            <h3 class="font-bold mb-3 flex items-center">
+              <i class="fas fa-font rtl-mr-2"></i>
+              حجم الخط
+            </h3>
+            <div class="flex items-center">
+              <span class="rtl-mr-2">A</span>
+              <input type="range" min="14" max="30" v-model="fontSize" 
+                     class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+              <span class="rtl-ml-2" :style="{ fontSize: fontSize + 'px' }">A</span>
+              <span class="rtl-ml-4">{{ fontSize }}px</span>
+            </div>
+          </div>
+          
+          <!-- Theme Settings -->
+          <div>
+            <h3 class="font-bold mb-3 flex items-center">
+              <i class="fas fa-palette rtl-mr-2"></i>
+              المظهر
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <button @click="setTheme('light')" 
+                      :class="{'ring-2 ring-green-500': !isDark}" 
+                      class="p-4 bg-white rounded-lg border flex flex-col items-center">
+                <i class="fas fa-sun text-2xl mb-2 text-yellow-500"></i>
+                <span>الوضع النهاري</span>
+              </button>
+              <button @click="setTheme('dark')" 
+                      :class="{'ring-2 ring-green-500': isDark}" 
+                      class="p-4 bg-gray-800 text-white rounded-lg border border-gray-700 flex flex-col items-center">
+                <i class="fas fa-moon text-2xl mb-2 text-blue-400"></i>
+                <span>الوضع الليلي</span>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Notification Settings -->
+          <div>
+            <h3 class="font-bold mb-3 flex items-center">
+              <i class="fas fa-bell rtl-mr-2"></i>
+              الإشعارات
+            </h3>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span>تذكير أذكار الصباح</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="morningReminder" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                </label>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>تذكير أذكار المساء</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="eveningReminder" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                </label>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>تذكير مواقيت الصلاة</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" v-model="prayerReminder" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reset Settings -->
+          <div>
+            <h3 class="font-bold mb-3 flex items-center">
+              <i class="fas fa-trash-alt rtl-mr-2"></i>
+              إعادة الضبط
+            </h3>
+            <button @click="resetSettings" class="w-full btn-primary py-3 rounded-lg">
+              إعادة تعيين جميع الإعدادات
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg fixed bottom-0 w-full flex justify-around py-3 border-t border-gray-200 dark:border-gray-700 z-10">
+      <button @click="setPage('home')" :class="{ 'active-tab': page === 'home' }" class="flex flex-col items-center">
+        <i class="fas fa-home icon-3d mb-1"></i>
+        <span class="text-xs">القرآن</span>
+      </button>
+      <button @click="setPage('favorites')" :class="{ 'active-tab': page === 'favorites' }" class="flex flex-col items-center">
+        <i class="fas fa-bookmark icon-3d mb-1"></i>
+        <span class="text-xs">المفضلة</span>
+      </button>
+      <button @click="setPage('azkar')" :class="{ 'active-tab': page === 'azkar' }" class="flex flex-col items-center">
+        <i class="fas fa-praying-hands icon-3d mb-1"></i>
+        <span class="text-xs">الأذكار</span>
+      </button>
+      <button @click="setPage('tasbeeh')" :class="{ 'active-tab': page === 'tasbeeh' }" class="flex flex-col items-center">
+        <i class="fas fa-hands-praying icon-3d mb-1"></i>
+        <span class="text-xs">التسبيح</span>
+      </button>
+      <button @click="setPage('prayer')" :class="{ 'active-tab': page === 'prayer' }" class="flex flex-col items-center">
+        <i class="fas fa-mosque icon-3d mb-1"></i>
+        <span class="text-xs">الصلاة</span>
+      </button>
+    </nav>
+
+    <!-- Audio Player Modal -->
+    <div v-if="showAudioPlayer" class="fixed bottom-16 left-0 right-0 bg-green-600 dark:bg-green-800 text-white p-3 shadow-lg z-20">
+      <div class="container mx-auto flex items-center justify-between">
+        <div class="flex items-center">
+          <button @click="toggleAudio" class="p-2 rounded-full hover:bg-green-700 dark:hover:bg-green-900 rtl-mr-2">
+            <i :class="isAudioPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+          </button>
+          <div>
+            <div class="font-bold">{{ currentSurahInfo.name }} - الآية {{ currentAyah }}</div>
+            <div class="text-xs">{{ reciterName }}</div>
+          </div>
+        </div>
+        <button @click="closeAudioPlayer" class="p-2 rounded-full hover:bg-green-700 dark:hover:bg-green-900">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <input type="range" v-model="audioProgress" min="0" :max="audioDuration" class="w-full h-1 mt-2">
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+    
+    createApp({
+      setup() {
+        // App State
+        const page = ref('home');
+        const isDark = ref(false);
+        const language = ref('ar');
+        const fontSize = ref(20);
+        const searchQuery = ref('');
+        const searchResults = ref([]);
+        
+        // Surah Data
+        const surahList = ref([]);
+        const currentSurah = ref(null);
+        const currentSurahInfo = ref({});
+        const currentSurahAyahs = ref([]);
+        const currentSurahTranslations = ref([]);
+        const isBookmarked = ref(false);
+        
+        // Bookmarks
+        const bookmarkedSurahs = ref([]);
+        const bookmarkedAyahs = ref([]);
+        
+        // Audio Player
+        const audioPlayer = ref(null);
+        const isAudioPlaying = ref(false);
+        const currentAudioUrl = ref('');
+        const currentAyah = ref(0);
+        const showAudioPlayer = ref(false);
+        const audioProgress = ref(0);
+        const audioDuration = ref(0);
+        const reciter = ref('ar.alafasy');
+        const reciterName = ref('مشاري العفاسي');
+        
+        // Azkar
+        const azkarCategory = ref('morning');
+        const morningAzkar = ref([]);
+        const eveningAzkar = ref([]);
+        const currentAzkar = computed(() => azkarCategory.value === 'morning' ? morningAzkar.value : eveningAzkar.value);
+        
+        // Tasbeeh Counter
+        const counter = ref(0);
+        const dhikrList = ref([
+          { text: 'سبحان الله', count: 0 },
+          { text: 'الحمد لله', count: 0 },
+          { text: 'الله أكبر', count: 0 },
+          { text: 'لا إله إلا الله', count: 0 },
+          { text: 'أستغفر الله', count: 0 },
+          { text: 'لا حول ولا قوة إلا بالله', count: 0 }
+        ]);
+        const currentDhikr = ref(0);
+        const counterName = ref('');
+        const savedCounters = ref([]);
+        
+        // Prayer Times
+        const prayerTimesData = ref({});
+        const prayerTimes = ref([]);
+        const nextPrayer = ref(null);
+        const timeToNextPrayer = ref('');
+        const selectedCity = ref('Riyadh');
+        const cities = ref([
+          { name: 'الرياض', value: 'Riyadh' },
+          { name: 'مكة المكرمة', value: 'Makkah' },
+          { name: 'المدينة المنورة', value: 'Madinah' },
+          { name: 'جدة', value: 'Jeddah' },
+          { name: 'الدمام', value: 'Dammam' },
+          { name: 'القاهرة', value: 'Cairo' },
+          { name: 'القدس', value: 'Jerusalem' },
+          { name: 'دبي', value: 'Dubai' }
+        ]);
+        
+        // Qibla
+        const qiblaDirection = ref(0);
+        const locationError = ref('');
+        
+        // Settings
+        const morningReminder = ref(true);
+        const eveningReminder = ref(true);
+        const prayerReminder = ref(true);
+        
+        // Page Titles
+        const pageTitles = {
+          'ar': {
+            home: "القرآن الكريم",
+            favorites: "المفضلة",
+            settings: "الإعدادات",
+            azkar: "الأذكار",
+            tasbeeh: "التسبيح",
+            prayer: "مواقيت الصلاة",
+            qibla: "اتجاه القبلة",
+            surah: "سورة"
+          },
+          'en': {
+            home: "Quran",
+            favorites: "Favorites",
+            settings: "Settings",
+            azkar: "Azkar",
+            tasbeeh: "Tasbeeh",
+            prayer: "Prayer Times",
+            qibla: "Qibla Direction",
+            surah: "Surah"
+          }
+        };
+        
+        const pageTitle = computed(() => {
+          if (page.value === 'surah') {
+            return `${pageTitles[language.value].surah} ${currentSurahInfo.value.name}`;
+          }
+          return pageTitles[language.value][page.value] || pageTitles['ar'][page.value];
+        });
+        
+        // Initialize App
+        onMounted(() => {
+          loadSettings();
+          loadSurahList();
+          loadAzkar();
+          fetchPrayerTimes();
+          getLocation();
+          loadBookmarks();
+          loadSavedCounters();
+          
+          // Check for saved counters
+          if (localStorage.getItem('savedCounters')) {
+            savedCounters.value = JSON.parse(localStorage.getItem('savedCounters'));
+          }
+          
+          // Set up audio player events
+          if (audioPlayer.value) {
+            audioPlayer.value.addEventListener('timeupdate', updateAudioProgress);
+            audioPlayer.value.addEventListener('loadedmetadata', () => {
+              audioDuration.value = audioPlayer.value.duration;
+            });
+          }
+          
+          // Update prayer times every minute
+          setInterval(updatePrayerTimes, 60000);
+        });
+        
+        // Methods
+        const setPage = (p) => {
+          page.value = p;
+          window.scrollTo(0, 0);
+        };
+        
+        const toggleTheme = () => {
+          isDark.value = !isDark.value;
+          document.documentElement.classList.toggle('dark', isDark.value);
+          saveSettings();
+        };
+        
+        const setTheme = (theme) => {
+          isDark.value = theme === 'dark';
+          document.documentElement.classList.toggle('dark', isDark.value);
+          saveSettings();
+        };
+        
+        const changeLanguage = () => {
+          saveSettings();
+          // In a real app, you would reload translations here
+        };
+        
+        const saveSettings = () => {
+          const settings = {
+            theme: isDark.value ? 'dark' : 'light',
+            language: language.value,
+            fontSize: fontSize.value,
+            morningReminder: morningReminder.value,
+            eveningReminder: eveningReminder.value,
+            prayerReminder: prayerReminder.value,
+            reciter: reciter.value,
+            city: selectedCity.value
+          };
+          localStorage.setItem('appSettings', JSON.stringify(settings));
+        };
+        
+        const loadSettings = () => {
+          const savedSettings = localStorage.getItem('appSettings');
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            isDark.value = settings.theme === 'dark';
+            language.value = settings.language || 'ar';
+            fontSize.value = settings.fontSize || 20;
+            morningReminder.value = settings.morningReminder !== false;
+            eveningReminder.value = settings.eveningReminder !== false;
+            prayerReminder.value = settings.prayerReminder !== false;
+            reciter.value = settings.reciter || 'ar.alafasy';
+            selectedCity.value = settings.city || 'Riyadh';
+            
+            document.documentElement.classList.toggle('dark', isDark.value);
+            document.documentElement.lang = language.value;
+            document.documentElement.dir = language.value === 'ar' ? 'rtl' : 'ltr';
+          }
+        };
+        
+        const resetSettings = () => {
+          if (confirm(language.value === 'ar' ? 'هل أنت متأكد من إعادة تعيين جميع الإعدادات؟' : 'Are you sure you want to reset all settings?')) {
+            localStorage.removeItem('appSettings');
+            loadSettings();
+          }
+        };
+        
+        const loadSurahList = async () => {
+          try {
+            const response = await fetch('https://api.alquran.cloud/v1/surah');
+            const data = await response.json();
+            surahList.value = data.data;
+          } catch (error) {
+            console.error('Error loading surah list:', error);
+            // Fallback data
+            surahList.value = [
+              { number: 1, name: "الفاتحة", englishName: "Al-Fatiha", ayahs: 7, revelationType: "Meccan" },
+              { number: 2, name: "البقرة", englishName: "Al-Baqarah", ayahs: 286, revelationType: "Medinan" },
+              // Add all 114 surahs in a real app
+            ];
+          }
+        };
+        
+        const openSurah = async (surahNumber, ayahNumber = null) => {
+          try {
+            // Load surah info
+            const surahInfoResponse = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`);
+            const surahInfoData = await surahInfoResponse.json();
+            currentSurahInfo.value = surahInfoData.data;
+            
+            // Load ayahs
+            const ayahsResponse = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/${language.value === 'ar' ? 'ar.alafasy' : 'en.sahih'}`);
+            const ayahsData = await ayahsResponse.json();
+            currentSurahAyahs.value = ayahsData.data.ayahs;
+            
+            // Load translations if not Arabic
+            if (language.value !== 'ar') {
+              const translationResponse = await fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.sahih`);
+              const translationData = await translationResponse.json();
+              currentSurahTranslations.value = translationData.data.ayahs;
+            }
+            
+            currentSurah.value = surahNumber;
+            page.value = 'surah';
+            
+            // Check if surah is bookmarked
+            isBookmarked.value = bookmarkedSurahs.value.some(s => s.number === surahNumber);
+            
+            // Scroll to specific ayah if provided
+            if (ayahNumber) {
+              setTimeout(() => {
+                const element = document.querySelector(`[data-ayah="${ayahNumber}"]`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }, 300);
+            }
+          } catch (error) {
+            console.error('Error loading surah:', error);
+          }
+        };
+        
+        const getSurahName = (surahNumber) => {
+          const surah = surahList.value.find(s => s.number === surahNumber);
+          return surah ? surah.name : '';
+        };
+        
+        const searchQuran = async () => {
+          if (!searchQuery.value.trim()) {
+            searchResults.value = [];
+            return;
+          }
+          
+          try {
+            const response = await fetch(`https://api.alquran.cloud/v1/search/${searchQuery.value}/all/${language.value === 'ar' ? 'ar.alafasy' : 'en.sahih'}`);
+            const data = await response.json();
+            searchResults.value = data.data.matches || [];
+          } catch (error) {
+            console.error('Error searching Quran:', error);
+            searchResults.value = [];
+          }
+        };
+        
+        const playAyah = (ayahNumber, surahNumber = null) => {
+          const surah = surahNumber || currentSurah.value;
+          currentAudioUrl.value = `https://everyayah.com/data/${reciter.value}/${surah}_${ayahNumber}.mp3`;
+          currentAyah.value = ayahNumber;
+          
+          // Play audio after a small delay to ensure URL is set
+          setTimeout(() => {
+            audioPlayer.value.play();
+            isAudioPlaying.value = true;
+            showAudioPlayer.value = true;
+          }, 100);
+        };
+        
+        const toggleAudio = () => {
+          if (isAudioPlaying.value) {
+            audioPlayer.value.pause();
+          } else {
+            audioPlayer.value.play();
+          }
+          isAudioPlaying.value = !isAudioPlaying.value;
+        };
+        
+        const closeAudioPlayer = () => {
+          audioPlayer.value.pause();
+          isAudioPlaying.value = false;
+          showAudioPlayer.value = false;
+        };
+        
+        const audioFinished = () => {
+          isAudioPlaying.value = false;
+          // Auto-play next ayah if available
+          if (currentAyah.value < currentSurahInfo.value.ayahs) {
+            playAyah(currentAyah.value + 1);
+          }
+        };
+        
+        const updateAudioProgress = () => {
+          audioProgress.value = audioPlayer.value.currentTime;
+        };
+        
+        const toggleBookmark = () => {
+          if (page.value === 'surah') {
+            if (isBookmarked.value) {
+              // Remove bookmark
+              bookmarkedSurahs.value = bookmarkedSurahs.value.filter(s => s.number !== currentSurah.value);
+            } else {
+              // Add bookmark
+              bookmarkedSurahs.value.push(currentSurahInfo.value);
+            }
+            isBookmarked.value = !isBookmarked.value;
+            saveBookmarks();
+          }
+        };
+        
+        const bookmarkAyah = (ayah) => {
+          const ayahKey = `${ayah.surah}:${ayah.ayah}`;
+          const index = bookmarkedAyahs.value.findIndex(a => a.key === ayahKey);
+          
+          if (index >= 0) {
+            bookmarkedAyahs.value.splice(index, 1);
+          } else {
+            bookmarkedAyahs.value.push({
+              key: ayahKey,
+              surah: ayah.surah,
+              ayah: ayah.ayah,
+              text: ayah.text,
+              surahName: getSurahName(ayah.surah)
+            });
+          }
+          saveBookmarks();
+        };
+        
+        const removeBookmark = (key, type) => {
+          if (type === 'surah') {
+            bookmarkedSurahs.value = bookmarkedSurahs.value.filter(s => s.number !== key);
+          } else {
+            bookmarkedAyahs.value = bookmarkedAyahs.value.filter(a => a.key !== key);
+          }
+          saveBookmarks();
+        };
+        
+        const saveBookmarks = () => {
+          localStorage.setItem('bookmarkedSurahs', JSON.stringify(bookmarkedSurahs.value));
+          localStorage.setItem('bookmarkedAyahs', JSON.stringify(bookmarkedAyahs.value));
+        };
+        
+        const loadBookmarks = () => {
+          if (localStorage.getItem('bookmarkedSurahs')) {
+            bookmarkedSurahs.value = JSON.parse(localStorage.getItem('bookmarkedSurahs'));
+          }
+          if (localStorage.getItem('bookmarkedAyahs')) {
+            bookmarkedAyahs.value = JSON.parse(localStorage.getItem('bookmarkedAyahs'));
+          }
+        };
+        
+        const loadAzkar = () => {
+          // Morning Azkar
+          morningAzkar.value = [
+            {
+              zekr: 'أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لا إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذَا الْيَوْمِ وَخَيْرَ مَا بَعْدَهُ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَذَا الْيَوْمِ وَشَرِّ مَا بَعْدَهُ، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ',
+              repeat: 1,
+              description: 'من أذكار الصباح'
+            },
+            {
+              zekr: 'اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ',
+              repeat: 1,
+              description: 'من أذكار الصباح'
+            },
+            {
+              zekr: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+              repeat: 100,
+              currentRepeat: 0,
+              description: 'من أذكار الصباح - تقال مائة مرة'
+            }
+          ];
+          
+          // Evening Azkar
+          eveningAzkar.value = [
+            {
+              zekr: 'أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لا إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، رَبِّ أَسْأَلُكَ خَيْرَ مَا فِي هَذِهِ اللَّيْلَةِ وَخَيْرَ مَا بَعْدَهَا، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا فِي هَذِهِ اللَّيْلَةِ وَشَرِّ مَا بَعْدَهَا، رَبِّ أَعُوذُ بِكَ مِنَ الْكَسَلِ وَسُوءِ الْكِبَرِ، رَبِّ أَعُوذُ بِكَ مِنْ عَذَابٍ فِي النَّارِ وَعَذَابٍ فِي الْقَبْرِ',
+              repeat: 1,
+              description: 'من أذكار المساء'
+            },
+            {
+              zekr: 'اللَّهُمَّ بِكَ أَمْسَيْنَا، وَبِكَ أَصْبَحْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ الْمَصِيرُ',
+              repeat: 1,
+              description: 'من أذكار المساء'
+            },
+            {
+              zekr: 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ',
+              repeat: 100,
+              currentRepeat: 0,
+              description: 'من أذكار المساء - تقال مائة مرة'
+            }
+          ];
+        };
+        
+        const setAzkarCategory = (category) => {
+          azkarCategory.value = category;
+        };
+        
+        const incrementRepeat = (index) => {
+          if (!currentAzkar.value[index].currentRepeat) {
+            currentAzkar.value[index].currentRepeat = 0;
+          }
+          if (currentAzkar.value[index].currentRepeat < currentAzkar.value[index].repeat) {
+            currentAzkar.value[index].currentRepeat++;
+          }
+        };
+        
+        const decrementRepeat = (index) => {
+          if (currentAzkar.value[index].currentRepeat > 0) {
+            currentAzkar.value[index].currentRepeat--;
+          }
+        };
+        
+        // Tasbeeh Counter Methods
+        const incrementCounter = () => {
+          counter.value++;
+          dhikrList.value[currentDhikr.value].count++;
+        };
+        
+        const resetCounter = () => {
+          counter.value = 0;
+          dhikrList.value[currentDhikr.value].count = 0;
+        };
+        
+        const setCurrentDhikr = (index) => {
+          currentDhikr.value = index;
+          counter.value = dhikrList.value[index].count;
+        };
+        
+        const saveCounter = () => {
+          if (!counterName.value.trim()) return;
+          
+          savedCounters.value.push({
+            name: counterName.value,
+            count: counter.value,
+            dhikrIndex: currentDhikr.value,
+            dhikrCounts: dhikrList.value.map(d => d.count)
+          });
+          
+          localStorage.setItem('savedCounters', JSON.stringify(savedCounters.value));
+          counterName.value = '';
+        };
+        
+        const loadCounter = (saved) => {
+          counter.value = saved.count;
+          currentDhikr.value = saved.dhikrIndex;
+          dhikrList.value = dhikrList.value.map((d, i) => ({
+            ...d,
+            count: saved.dhikrCounts[i] || 0
+          }));
+        };
+        
+        const deleteCounter = (index) => {
+          savedCounters.value.splice(index, 1);
+          localStorage.setItem('savedCounters', JSON.stringify(savedCounters.value));
+        };
+        
+        const loadSavedCounters = () => {
+          const saved = localStorage.getItem('savedCounters');
+          if (saved) {
+            savedCounters.value = JSON.parse(saved);
+          }
+        };
+        
+        // Prayer Times Methods
+        const fetchPrayerTimes = async () => {
+          try {
+            const response = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${selectedCity.value}&country=SA&method=4`);
+            const data = await response.json();
+            
+            prayerTimesData.value = {
+              date: data.data.date.gregorian.date,
+              hijri: data.data.date.hijri.date,
+              imsak: data.data.timings.Imsak,
+              fajr: data.data.timings.Fajr,
+              sunrise: data.data.timings.Sunrise,
+              dhuhr: data.data.timings.Dhuhr,
+              asr: data.data.timings.Asr,
+              maghrib: data.data.timings.Maghrib,
+              isha: data.data.timings.Isha,
+              midnight: data.data.timings.Midnight
+            };
+            
+            prayerTimes.value = [
+              { name: 'fajr', label: 'الفجر', time: data.data.timings.Fajr },
+              { name: 'sunrise', label: 'الشروق', time: data.data.timings.Sunrise },
+              { name: 'dhuhr', label: 'الظهر', time: data.data.timings.Dhuhr },
+              { name: 'asr', label: 'العصر', time: data.data.timings.Asr },
+              { name: 'maghrib', label: 'المغرب', time: data.data.timings.Maghrib },
+              { name: 'isha', label: 'العشاء', time: data.data.timings.Isha }
+            ];
+            
+            updateNextPrayer();
+            saveSettings();
+          } catch (error) {
+            console.error('Error fetching prayer times:', error);
+          }
+        };
+        
+        const updatePrayerTimes = () => {
+          updateNextPrayer();
+        };
+        
+        const updateNextPrayer = () => {
+          if (!prayerTimesData.value.fajr) return;
+          
+          const now = new Date();
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          
+          const prayerTimes = [
+            { name: 'fajr', time: convertTimeToMinutes(prayerTimesData.value.fajr) },
+            { name: 'dhuhr', time: convertTimeToMinutes(prayerTimesData.value.dhuhr) },
+            { name: 'asr', time: convertTimeToMinutes(prayerTimesData.value.asr) },
+            { name: 'maghrib', time: convertTimeToMinutes(prayerTimesData.value.maghrib) },
+            { name: 'isha', time: convertTimeToMinutes(prayerTimesData.value.isha) }
+          ];
+          
+          let nextPrayerTime = null;
+          
+          for (const prayer of prayerTimes) {
+            if (prayer.time > currentTime) {
+              nextPrayerTime = prayer;
+              break;
+            }
+          }
+          
+          // If no next prayer today, use fajr tomorrow
+          if (!nextPrayerTime) {
+            nextPrayerTime = { name: 'fajr', time: convertTimeToMinutes(prayerTimesData.value.fajr) + 1440 };
+          }
+          
+          nextPrayer.value = {
+            name: nextPrayerTime.name,
+            label: getPrayerLabel(nextPrayerTime.name),
+            time: getPrayerTime(nextPrayerTime.name)
+          };
+          
+          // Calculate time remaining
+          const minutesRemaining = nextPrayerTime.time - currentTime;
+          const hours = Math.floor(minutesRemaining / 60);
+          const minutes = minutesRemaining % 60;
+          
+          timeToNextPrayer.value = `${hours} ساعة و ${minutes} دقيقة`;
+        };
+        
+        const convertTimeToMinutes = (timeStr) => {
+          const [time, period] = timeStr.split(' ');
+          const [hours, minutes] = time.split(':').map(Number);
+          
+          let totalMinutes = hours * 60 + minutes;
+          
+          if (period === 'PM' && hours !== 12) {
+            totalMinutes += 12 * 60;
+          } else if (period === 'AM' && hours === 12) {
+            totalMinutes -= 12 * 60;
+          }
+          
+          return totalMinutes;
+        };
+        
+        const getPrayerLabel = (name) => {
+          const labels = {
+            fajr: 'الفجر',
+            sunrise: 'الشروق',
+            dhuhr: 'الظهر',
+            asr: 'العصر',
+            maghrib: 'المغرب',
+            isha: 'العشاء'
+          };
+          return labels[name] || name;
+        };
+        
+        const getPrayerTime = (name) => {
+          return prayerTimesData.value[name.toLowerCase()] || '';
+        };
+        
+        const isCurrentPrayer = (name) => {
+          if (!nextPrayer.value) return false;
+          
+          const now = new Date();
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          const prayerTime = convertTimeToMinutes(getPrayerTime(name));
+          
+          // Consider current prayer for 30 minutes after its time
+          return currentTime >= prayerTime && currentTime < prayerTime + 30;
+        };
+        
+        // Qibla Methods
+        const getLocation = () => {
+          locationError.value = '';
+          
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                calculateQibla(position.coords.latitude, position.coords.longitude);
+              },
+              (error) => {
+                locationError.value = 'تعذر الحصول على الموقع: ' + error.message;
+                // Default to Mecca's coordinates if location access is denied
+                calculateQibla(21.3891, 39.8579);
+              }
+            );
+          } else {
+            locationError.value = 'المتصفح لا يدعم خدمة الموقع';
+            // Default to Mecca's coordinates
+            calculateQibla(21.3891, 39.8579);
+          }
+        };
+        
+        const calculateQibla = (lat, lng) => {
+          // Mecca coordinates
+          const meccaLat = 21.3891;
+          const meccaLng = 39.8579;
+          
+          // Convert to radians
+          const φ1 = lat * Math.PI / 180;
+          const φ2 = meccaLat * Math.PI / 180;
+          const Δλ = (meccaLng - lng) * Math.PI / 180;
+          
+          // Calculate bearing
+          const y = Math.sin(Δλ) * Math.cos(φ2);
+          const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+          const θ = Math.atan2(y, x);
+          const bearing = (θ * 180 / Math.PI + 360) % 360;
+          
+          qiblaDirection.value = Math.round(bearing);
+        };
+        
+        // Utility Methods
+        const copyAyah = (text) => {
+          navigator.clipboard.writeText(text).then(() => {
+            alert(language.value === 'ar' ? 'تم نسخ النص' : 'Text copied');
+          });
+        };
+        
+        const shareAyah = (ayah) => {
+          if (navigator.share) {
+            navigator.share({
+              title: `سورة ${getSurahName(ayah.surah)} - الآية ${ayah.ayah}`,
+              text: ayah.text,
+              url: window.location.href
+            }).catch(console.error);
+          } else {
+            copyAyah(`${ayah.text}\n\nسورة ${getSurahName(ayah.surah)} - الآية ${ayah.ayah}`);
+          }
+        };
+        
+        const getTranslation = (ayahNumber) => {
+          if (language.value === 'ar') return '';
+          const translation = currentSurahTranslations.value.find(a => a.numberInSurah === ayahNumber);
+          return translation ? translation.text : '';
+        };
+        
+        return {
+          // State
+          page,
+          isDark,
+          language,
+          fontSize,
+          searchQuery,
+          searchResults,
+          surahList,
+          currentSurahInfo,
+          currentSurahAyahs,
+          isBookmarked,
+          bookmarkedSurahs,
+          bookmarkedAyahs,
+          audioPlayer,
+          isAudioPlaying,
+          currentAudioUrl,
+          currentAyah,
+          showAudioPlayer,
+          audioProgress,
+          audioDuration,
+          reciterName,
+          azkarCategory,
+          currentAzkar,
+          counter,
+          dhikrList,
+          currentDhikr,
+          counterName,
+          savedCounters,
+          prayerTimesData,
+          prayerTimes,
+          nextPrayer,
+          timeToNextPrayer,
+          selectedCity,
+          cities,
+          qiblaDirection,
+          locationError,
+          morningReminder,
+          eveningReminder,
+          prayerReminder,
+          
+          // Computed
+          pageTitle,
+          
+          // Methods
+          setPage,
+          toggleTheme,
+          setTheme,
+          changeLanguage,
+          resetSettings,
+          openSurah,
+          getSurahName,
+          searchQuran,
+          playAyah,
+          toggleAudio,
+          closeAudioPlayer,
+          audioFinished,
+          updateAudioProgress,
+          toggleBookmark,
+          bookmarkAyah,
+          removeBookmark,
+          setAzkarCategory,
+          incrementRepeat,
+          decrementRepeat,
+          incrementCounter,
+          resetCounter,
+          setCurrentDhikr,
+          saveCounter,
+          loadCounter,
+          deleteCounter,
+          fetchPrayerTimes,
+          updatePrayerTimes,
+          isCurrentPrayer,
+          getLocation,
+          copyAyah,
+          shareAyah,
+          getTranslation
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
